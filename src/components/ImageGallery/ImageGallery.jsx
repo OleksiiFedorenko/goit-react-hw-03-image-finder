@@ -1,5 +1,7 @@
+import { Gallery } from './ImageGallery.styled';
+
 const ImageGallery = () => {
-  return <ul class="gallery"></ul>;
+  return <Gallery></Gallery>;
 };
 
 export default ImageGallery;

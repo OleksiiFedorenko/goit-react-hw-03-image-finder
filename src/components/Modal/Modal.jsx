@@ -1,10 +1,12 @@
+import { Overlay, Modal } from './Modal.styled';
+
 const Modal = () => {
   return (
-    <div class="overlay">
-      <div class="modal">
+    <Overlay>
+      <Modal>
         <img src="" alt="" />
-      </div>
-    </div>
+      </Modal>
+    </Overlay>
   );
 };
 
