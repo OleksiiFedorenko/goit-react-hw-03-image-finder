@@ -34,7 +34,7 @@ export const Button = styled.button`
   width: 48px;
   height: 48px;
   border: 0;
-  background-image: url('https://image.flaticon.com/icons/svg/149/149852.svg');
+  background-image: url('https://pic.onlinewebfonts.com/svg/img_194915.svg');
   background-size: 40%;
   background-repeat: no-repeat;
   background-position: center;

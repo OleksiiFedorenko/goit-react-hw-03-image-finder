@@ -14,23 +14,19 @@ export default class GalleryService {
     const config = {
       params: {
         key: API_KEY,
-        q: this.searchQuery,
+        q: this.query,
         image_type: 'photo',
         orientation: 'horizontal',
         safesearch: true,
         page: this.pageNumber,
-        per_page: 40,
+        per_page: 12,
       },
     };
 
-    try {
-      const fetchedData = await axios(config);
-      this.incrementPage();
-      this.decrementCapacity();
-      return fetchedData.data;
-    } catch (error) {
-      console.log(error);
-    }
+    const fetchedData = await axios(config);
+    this.incrementPage();
+    this.decrementCapacity();
+    return fetchedData.data;
   }
 
   incrementPage() {
