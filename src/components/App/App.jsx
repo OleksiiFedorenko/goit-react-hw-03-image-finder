@@ -47,8 +47,6 @@ class App extends Component {
   };
 
   loadMore = async () => {
-    console.log('click');
-
     try {
       const fetchedData = await galleryService.fetchImages();
       const imageArray = fetchedData.hits.map(
