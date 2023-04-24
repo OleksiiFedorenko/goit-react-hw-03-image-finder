@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { LoadButton } from './Button.styled';
 
 const Button = ({ onClick }) => {
@@ -6,6 +7,10 @@ const Button = ({ onClick }) => {
       Load more
     </LoadButton>
   );
+};
+
+Button.propTypes = {
+  onClick: PropTypes.func.isRequired,
 };
 
 export default Button;

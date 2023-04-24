@@ -1,10 +1,16 @@
 import PropTypes from 'prop-types';
 import { Bar, Form, Button, ButtonLabel, Input } from './Searchbar.styled';
 
-const Searchbar = ({ onSubmit }) => {
+const Searchbar = ({ getImages }) => {
+  const handleSubmit = e => {
+    e.preventDefault();
+    const searchQuery = e.target.input.value.trim();
+    getImages(searchQuery);
+  };
+
   return (
     <Bar>
-      <Form onSubmit={onSubmit}>
+      <Form onSubmit={handleSubmit}>
         <Button type="submit">
           <ButtonLabel>Search</ButtonLabel>
         </Button>
@@ -12,7 +18,7 @@ const Searchbar = ({ onSubmit }) => {
         <Input
           type="text"
           name="input"
-          autocomplete="off"
+          autoComplete="off"
           autoFocus
           placeholder="Search images and photos"
         />
@@ -22,7 +28,7 @@ const Searchbar = ({ onSubmit }) => {
 };
 
 Searchbar.propTypes = {
-  onSubmit: PropTypes.func.isRequired,
+  getImages: PropTypes.func.isRequired,
 };
 
 export default Searchbar;

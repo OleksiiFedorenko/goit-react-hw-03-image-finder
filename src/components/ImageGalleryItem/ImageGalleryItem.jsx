@@ -9,9 +9,12 @@ const ImageGalleryItem = ({
 }) => {
   return (
     <GalleryItem>
-      <a onClick={() => onImageClick(largeImageURL, tags)}>
-        <Image src={webformatURL} alt={tags} />
-      </a>
+      <Image
+        onClick={() => onImageClick(largeImageURL, tags)}
+        src={webformatURL}
+        alt={tags}
+        loading="lazy"
+      />
     </GalleryItem>
   );
 };

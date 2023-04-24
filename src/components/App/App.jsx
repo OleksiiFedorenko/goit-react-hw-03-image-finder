@@ -1,65 +1,73 @@
 import { Component } from 'react';
 import { Container } from './App.styled';
-import GalleryService from 'services/GalleryService';
 import Searchbar from 'components/Searchbar/Searchbar';
 import Loader from 'components/Loader/Loader';
 import ImageGallery from 'components/ImageGallery/ImageGallery';
 import Button from 'components/Button/Button';
-import NoImagesWarning from 'components/NoImagesWarning/NoImagesWarning';
+import TextWarning from 'components/TextWarning/TextWarning';
 import Modal from 'components/Modal/Modal';
 
+import GalleryService from 'services/GalleryService';
 const galleryService = new GalleryService();
 
 class App extends Component {
   state = {
+    status: 'idle',
     images: [],
+    imagesCapacity: 0,
     modalImage: {},
-    status: '',
     message: 'No images to show yet',
   };
 
-  getImages = async e => {
-    e.preventDefault();
-    const searchQuery = e.target.input.value.trim();
-    galleryService.query = searchQuery;
-    galleryService.resetPage();
+  getImages = async searchQuery => {
+    if (searchQuery === galleryService.query) return;
+    if (!searchQuery) {
+      return this.setState({
+        status: 'rejected',
+        message: 'Please type what you want to find',
+      });
+    }
+
+    this.setState({ status: 'pending', images: [] });
 
     try {
+      galleryService.query = searchQuery;
+      galleryService.resetPage();
       const fetchedData = await galleryService.fetchImages();
-      console.log(fetchedData);
+
       if (!fetchedData.totalHits) {
-        this.setState({ message: 'No images found' });
-        return;
+        return this.setState({
+          status: 'rejected',
+          message: 'No images found',
+        });
       }
-      const imageArray = fetchedData.hits.map(
-        ({ id, largeImageURL, webformatURL, tags }) => ({
-          id,
-          largeImageURL,
-          webformatURL,
-          tags,
-        })
-      );
-      console.log(imageArray);
-      this.setState({ images: imageArray });
+
+      const imageArray = this.collectNeededData(fetchedData.hits);
+      this.setState({
+        status: 'resolved',
+        images: imageArray,
+        imagesCapacity: fetchedData.totalHits - 12,
+        message: fetchedData.totalHits > 12 ? '' : 'You reached the limit',
+      });
     } catch (error) {
-      console.log(error);
+      this.handleError(error);
     }
   };
 
   loadMore = async () => {
+    this.setState({ status: 'pending' });
+
     try {
       const fetchedData = await galleryService.fetchImages();
-      const imageArray = fetchedData.hits.map(
-        ({ id, largeImageURL, webformatURL, tags }) => ({
-          id,
-          largeImageURL,
-          webformatURL,
-          tags,
-        })
-      );
-      this.setState({ images: [...this.state.images, ...imageArray] });
+      const imageArray = this.collectNeededData(fetchedData.hits);
+      this.setState(({ images, imagesCapacity }) => ({
+        status: 'resolved',
+        images: [...images, ...imageArray],
+        imagesCapacity: imagesCapacity - 12,
+        message: imagesCapacity > 12 ? '' : 'You reached the limit',
+      }));
     } catch (error) {
-      console.log(error);
+      this.handleError(error);
     }
   };
 
@@ -71,25 +79,50 @@ class App extends Component {
     this.setState({ modalImage: {} });
   };
 
+  collectNeededData = fetchedArray => {
+    return fetchedArray.map(({ id, largeImageURL, webformatURL, tags }) => ({
+      id,
+      largeImageURL,
+      webformatURL,
+      tags,
+    }));
+  };
+
+  handleError = error => {
+    console.log(error);
+    this.setState({
+      status: 'rejected',
+      message: 'Something went wrong. Please try again.',
+    });
+  };
+
   render() {
+    const { images, imagesCapacity, status, message, modalImage } = this.state;
+
     return (
       <Container>
-        <Searchbar onSubmit={this.getImages} />
-        {this.state.images.length ? (
-          <>
-            <ImageGallery
-              images={this.state.images}
-              onImageClick={this.openModal}
-            />
-            <Button onClick={this.loadMore} />
-          </>
-        ) : (
-          <NoImagesWarning message={this.state.message} />
+        <Searchbar getImages={this.getImages} />
+
+        {(status === 'resolved' ||
+          (status === 'pending' && images.length !== 0)) && (
+          <ImageGallery images={images} onImageClick={this.openModal} />
         )}
-        {this.state.modalImage.url && (
-          <Modal image={this.state.modalImage} onClose={this.closeModal} />
+
+        {status === 'pending' && <Loader />}
+
+        {status === 'resolved' && imagesCapacity > 0 && (
+          <Button onClick={this.loadMore} />
         )}
-        {/* <Loader /> */}
+
+        {(status === 'idle' ||
+          status === 'rejected' ||
+          (status === 'resolved' && imagesCapacity <= 0)) && (
+          <TextWarning message={message} />
+        )}
+
+        {modalImage.url && (
+          <Modal image={modalImage} onClose={this.closeModal} />
+        )}
       </Container>
     );
   }
