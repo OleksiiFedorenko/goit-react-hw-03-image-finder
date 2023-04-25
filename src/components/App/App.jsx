@@ -7,68 +7,84 @@ import Button from 'components/Button/Button';
 import TextWarning from 'components/TextWarning/TextWarning';
 import Modal from 'components/Modal/Modal';
 
-import GalleryService from 'services/GalleryService';
-const galleryService = new GalleryService();
+import fetchImages from 'services/GalleryService';
 
 class App extends Component {
   state = {
     status: 'idle',
+    query: '',
+    page: 0,
+    totalPages: 0,
     images: [],
-    imagesCapacity: 0,
     modalImage: {},
-    message: 'No images to show yet',
+    message: 'Please let us know what you want to find',
   };
 
-  getImages = async searchQuery => {
-    if (searchQuery === galleryService.query) return;
-    if (!searchQuery) {
+  async componentDidUpdate(_, prevState) {
+    const { query, page } = this.state;
+
+    if (prevState.query !== query) {
+      try {
+        const fetchedData = await fetchImages(query, page);
+
+        if (!fetchedData.totalHits) {
+          return this.setState({
+            status: 'rejected',
+            message: 'No images found',
+          });
+        }
+
+        const imageArray = this.collectNeededData(fetchedData.hits);
+        this.setState({
+          status: 'resolved',
+          images: imageArray,
+          totalPages: Math.ceil(fetchedData.totalHits / 12),
+          message:
+            fetchedData.totalHits > 12 ? '' : `That's it. Keep searching!`,
+        });
+      } catch (error) {
+        this.handleError(error);
+      }
+      return;
+    }
+
+    if (prevState.page !== page) {
+      try {
+        const fetchedData = await fetchImages(query, page);
+        const imageArray = this.collectNeededData(fetchedData.hits);
+        this.setState(({ images }) => ({
+          status: 'resolved',
+          images: [...images, ...imageArray],
+        }));
+      } catch (error) {
+        this.handleError(error);
+      }
+    }
+  }
+
+  getImages = query => {
+    if (!query) {
       return this.setState({
         status: 'rejected',
-        message: 'Please type what you want to find',
+        message: 'You searched nothing, please specify your query',
       });
     }
+    if (query === this.state.query) return;
 
-    this.setState({ status: 'pending', images: [] });
-
-    try {
-      galleryService.query = searchQuery;
-      galleryService.resetPage();
-      const fetchedData = await galleryService.fetchImages();
-
-      if (!fetchedData.totalHits) {
-        return this.setState({
-          status: 'rejected',
-          message: 'No images found',
-        });
-      }
-
-      const imageArray = this.collectNeededData(fetchedData.hits);
-      this.setState({
-        status: 'resolved',
-        images: imageArray,
-        imagesCapacity: fetchedData.totalHits - 12,
-        message: fetchedData.totalHits > 12 ? '' : 'You reached the limit',
-      });
-    } catch (error) {
-      this.handleError(error);
-    }
+    this.setState({
+      status: 'pending',
+      query,
+      page: 1,
+      images: [],
+    });
   };
 
   loadMore = async () => {
-    this.setState({ status: 'pending' });
-
-    try {
-      const fetchedData = await galleryService.fetchImages();
-      const imageArray = this.collectNeededData(fetchedData.hits);
-      this.setState(({ images, imagesCapacity }) => ({
-        status: 'resolved',
-        images: [...images, ...imageArray],
-        imagesCapacity: imagesCapacity - 12,
-        message: imagesCapacity > 12 ? '' : 'You reached the limit',
-      }));
-    } catch (error) {
-      this.handleError(error);
-    }
+    this.setState(({ page, totalPages }) => ({
+      status: 'pending',
+      page: page + 1,
+      message: page + 1 === totalPages ? `That's it. Keep searching!` : '',
+    }));
   };
 
   openModal = (url, alt) => {
@@ -97,7 +113,8 @@ class App extends Component {
   };
 
   render() {
-    const { images, imagesCapacity, status, message, modalImage } = this.state;
+    const { images, page, totalPages, status, message, modalImage } =
+      this.state;
 
     return (
       <Container>
@@ -110,13 +127,13 @@ class App extends Component {
 
         {status === 'pending' && <Loader />}
 
-        {status === 'resolved' && imagesCapacity > 0 && (
+        {status === 'resolved' && page !== totalPages && (
           <Button onClick={this.loadMore} />
         )}
 
         {(status === 'idle' ||
           status === 'rejected' ||
-          (status === 'resolved' && imagesCapacity <= 0)) && (
+          (status === 'resolved' && page === totalPages)) && (
           <TextWarning message={message} />
         )}
 
