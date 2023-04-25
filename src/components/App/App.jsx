@@ -15,23 +15,23 @@ class App extends Component {
     page: 0,
     totalPages: 0,
     images: [],
-    modalImage: {},
     message: 'Please let us know what you want to find',
+    modal: {
+      isOpen: false,
+      imageUrl: '',
+      imageAlt: '',
+    },
   };
 
   componentDidUpdate(_, prevState) {
     const { query, page } = this.state;
 
-    if (prevState.query !== query) {
-      return this.renderNewImages(query, page);
-    }
-
-    if (prevState.page !== page) {
-      this.renderMoreImages(query, page);
+    if (prevState.query !== query || prevState.page !== page) {
+      this.getImages(query, page);
     }
   }
 
-  getImages = query => {
+  onSubmit = query => {
     if (!query) {
       return this.setState({
         status: 'rejected',
@@ -41,30 +41,26 @@ class App extends Component {
     if (query === this.state.query) return;
 
     this.setState({
-      status: 'pending',
       query,
       page: 1,
       images: [],
     });
   };
 
-  loadMore = async () => {
-    this.setState(({ page, totalPages }) => ({
-      status: 'pending',
-      page: page + 1,
-      message: page + 1 === totalPages ? `That's it. Keep searching!` : '',
-    }));
+  onLoadMore = () => {
+    this.setState(({ page }) => ({ page: page + 1 }));
   };
 
-  openModal = (url, alt) => {
-    this.setState({ modalImage: { url, alt } });
+  openModal = (imageUrl, imageAlt) => {
+    this.setState({ modal: { isOpen: true, imageUrl, imageAlt } });
   };
 
   closeModal = () => {
-    this.setState({ modalImage: {} });
+    this.setState({ modal: { isOpen: false } });
   };
 
-  renderNewImages = async (query, page) => {
+  getImages = async (query, page) => {
+    this.setState({ status: 'pending' });
     try {
       const { totalHits, hits } = await fetchImages(query, page);
 
@@ -75,30 +71,20 @@ class App extends Component {
         });
       }
 
+      const totalPages = Math.ceil(totalHits / 12);
       const imageArray = this.collectNeededData(hits);
 
-      this.setState({
-        status: 'resolved',
-        images: imageArray,
-        totalPages: Math.ceil(totalHits / 12),
-        message: totalHits > 12 ? '' : `That's it. Keep searching!`,
-      });
-    } catch (error) {
-      this.handleError(error);
-    }
-  };
-
-  renderMoreImages = async (query, page) => {
-    try {
-      const { hits } = await fetchImages(query, page);
-      const imageArray = this.collectNeededData(hits);
-
-      this.setState(({ images }) => ({
+      this.setState(({ images, page }) => ({
         status: 'resolved',
         images: [...images, ...imageArray],
+        totalPages,
+        message: page === totalPages ? `That's it. Keep searching!` : '',
       }));
     } catch (error) {
-      this.handleError(error);
+      this.setState({
+        status: 'rejected',
+        message: 'Something went wrong. Please try again.',
+      });
     }
   };
 
@@ -111,21 +97,12 @@ class App extends Component {
     }));
   };
 
-  handleError = error => {
-    console.log(error);
-    this.setState({
-      status: 'rejected',
-      message: 'Something went wrong. Please try again.',
-    });
-  };
-
   render() {
-    const { images, page, totalPages, status, message, modalImage } =
-      this.state;
+    const { images, page, totalPages, status, message, modal } = this.state;
 
     return (
       <Container>
-        <Searchbar getImages={this.getImages} />
+        <Searchbar onSubmit={this.onSubmit} />
 
         {(status === 'resolved' ||
           (status === 'pending' && images.length !== 0)) && (
@@ -135,7 +112,7 @@ class App extends Component {
         {status === 'pending' && <Loader />}
 
         {status === 'resolved' && page !== totalPages && (
-          <Button onClick={this.loadMore} />
+          <Button onLoadMore={this.onLoadMore} />
         )}
 
         {(status === 'idle' ||
@@ -144,9 +121,7 @@ class App extends Component {
           <TextWarning message={message} />
         )}
 
-        {modalImage.url && (
-          <Modal image={modalImage} onClose={this.closeModal} />
-        )}
+        {modal.isOpen && <Modal image={modal} onClose={this.closeModal} />}
       </Container>
     );
   }

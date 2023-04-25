@@ -17,12 +17,12 @@ class Modal extends Component {
   };
 
   render() {
-    const { url, alt } = this.props.image;
+    const { imageUrl, imageAlt } = this.props.image;
 
     return (
       <Overlay onClick={this.handleClosing}>
         <ImageContainer>
-          <img src={url} alt={alt} />
+          <img src={imageUrl} alt={imageAlt} />
         </ImageContainer>
       </Overlay>
     );
@@ -31,8 +31,9 @@ class Modal extends Component {
 
 Modal.propTypes = {
   image: PropTypes.exact({
-    url: PropTypes.string.isRequired,
-    alt: PropTypes.string.isRequired,
+    isOpen: PropTypes.bool.isRequired,
+    imageUrl: PropTypes.string.isRequired,
+    imageAlt: PropTypes.string.isRequired,
   }),
 };
 
