@@ -1,13 +1,12 @@
 import { Component } from 'react';
 import { Container } from './App.styled';
+import fetchImages from 'services/GalleryService';
 import Searchbar from 'components/Searchbar/Searchbar';
 import Loader from 'components/Loader/Loader';
 import ImageGallery from 'components/ImageGallery/ImageGallery';
 import Button from 'components/Button/Button';
 import TextWarning from 'components/TextWarning/TextWarning';
 import Modal from 'components/Modal/Modal';
-
-import fetchImages from 'services/GalleryService';
 
 class App extends Component {
   state = {
@@ -20,45 +19,15 @@ class App extends Component {
     message: 'Please let us know what you want to find',
   };
 
-  async componentDidUpdate(_, prevState) {
+  componentDidUpdate(_, prevState) {
     const { query, page } = this.state;
 
     if (prevState.query !== query) {
-      try {
-        const fetchedData = await fetchImages(query, page);
-
-        if (!fetchedData.totalHits) {
-          return this.setState({
-            status: 'rejected',
-            message: 'No images found',
-          });
-        }
-
-        const imageArray = this.collectNeededData(fetchedData.hits);
-        this.setState({
-          status: 'resolved',
-          images: imageArray,
-          totalPages: Math.ceil(fetchedData.totalHits / 12),
-          message:
-            fetchedData.totalHits > 12 ? '' : `That's it. Keep searching!`,
-        });
-      } catch (error) {
-        this.handleError(error);
-      }
-      return;
+      return this.renderNewImages(query, page);
     }
 
     if (prevState.page !== page) {
-      try {
-        const fetchedData = await fetchImages(query, page);
-        const imageArray = this.collectNeededData(fetchedData.hits);
-        this.setState(({ images }) => ({
-          status: 'resolved',
-          images: [...images, ...imageArray],
-        }));
-      } catch (error) {
-        this.handleError(error);
-      }
+      this.renderMoreImages(query, page);
     }
   }
 
@@ -93,6 +62,44 @@ class App extends Component {
 
   closeModal = () => {
     this.setState({ modalImage: {} });
+  };
+
+  renderNewImages = async (query, page) => {
+    try {
+      const { totalHits, hits } = await fetchImages(query, page);
+
+      if (!totalHits) {
+        return this.setState({
+          status: 'rejected',
+          message: 'No images found, please try different query',
+        });
+      }
+
+      const imageArray = this.collectNeededData(hits);
+
+      this.setState({
+        status: 'resolved',
+        images: imageArray,
+        totalPages: Math.ceil(totalHits / 12),
+        message: totalHits > 12 ? '' : `That's it. Keep searching!`,
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  };
+
+  renderMoreImages = async (query, page) => {
+    try {
+      const { hits } = await fetchImages(query, page);
+      const imageArray = this.collectNeededData(hits);
+
+      this.setState(({ images }) => ({
+        status: 'resolved',
+        images: [...images, ...imageArray],
+      }));
+    } catch (error) {
+      this.handleError(error);
+    }
   };
 
   collectNeededData = fetchedArray => {
