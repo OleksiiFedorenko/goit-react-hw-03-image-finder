@@ -56,7 +56,7 @@ class App extends Component {
   };
 
   closeModal = () => {
-    this.setState({ modal: { isOpen: false } });
+    this.setState({ modal: { isOpen: false, imageUrl: '', imageAlt: '' } });
   };
 
   getImages = async (query, page) => {
